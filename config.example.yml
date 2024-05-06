@@ -1,0 +1,27 @@
+database:
+  # TODO: store in env var
+  uri: mongodb://127.0.0.1:27017/previsix
+
+server:
+  host: 127.0.0.1
+  port: 3000
+
+# Configuration for the Asterix API.
+asterix:
+  # GraphQL endpoint
+  endpoint:
+  queries:
+    calendar:
+
+forecasts:
+  # The priority exponent is used to calculate the priority of a forecast job.
+  # Calculated as: priority = (forecast date - last forecast date) ^ priorityExponent
+  priorityExponent: 0.6
+  # The amount of forecasts to generate concurrently.
+  concurrent: 2
+  # The amount of forecasts to generate for each forecast queuing job.
+  amount: 20
+  # The interval in minutes between forecast queuing jobs.
+  interval:
+    min: 30
+    max: 45
