@@ -22,8 +22,6 @@ func Connect() error {
 		return err
 	}
 
-	defer client.Disconnect(context.TODO())
-
 	err = client.Ping(context.TODO(), nil)
 
 	return err

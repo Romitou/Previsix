@@ -39,7 +39,7 @@ var rootCmd = &cobra.Command{
 
 		r := gin.Default()
 		// TODO: Add routes here
-		err = r.Run(config.Get().Server.Host, strconv.Itoa(config.Get().Server.Port))
+		err = r.Run(config.Get().Server.Host + ":" + strconv.Itoa(config.Get().Server.Port))
 		if err != nil {
 			log.Panic("error starting http server: ", err)
 		}

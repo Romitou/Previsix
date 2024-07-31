@@ -28,12 +28,15 @@ func Start() error {
 		return err
 	}
 
-	_, err = generalScheduler.NewJob(
+	_, err = forecastScheduler.NewJob(
 		gocron.DurationRandomJob(
 			time.Duration(config.Get().Forecasts.Interval.Min)*time.Minute,
 			time.Duration(config.Get().Forecasts.Interval.Max)*time.Minute),
 		gocron.NewTask(jobs.QueueForecastJobs, forecastScheduler),
 	)
+
+	go generalScheduler.Start()
+	go forecastScheduler.Start()
 
 	return err
 }
