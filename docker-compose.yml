@@ -1,0 +1,22 @@
+services:
+  previsix:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PREVISIX_DATABASE_URI: mongodb://mongo:27017/previsix
+      # Optional official calendar API:
+      # PREVISIX_ASTERIX_ENDPOINT: https://...
+      # PREVISIX_ASTERIX_QUERIES_CALENDAR: "{ calendar { day times } }"
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

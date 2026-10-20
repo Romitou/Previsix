@@ -1,21 +1,48 @@
+# Every setting is optional and has a default value. Each one can also be set
+# with an environment variable: PREVISIX_<SECTION>_<KEY>, for instance
+# PREVISIX_DATABASE_URI or PREVISIX_FORECASTS_INTERVAL_MIN.
+
 database:
-  # TODO: store in env var
+  # Keep credentials out of this file: prefer PREVISIX_DATABASE_URI.
   uri: mongodb://127.0.0.1:27017/previsix
+  # Database name. When empty, the one from the URI is used, or "previsix".
+  name:
 
 server:
   host: 127.0.0.1
   port: 3000
+  # Gin mode: release, debug or test.
+  mode: release
 
-# Configuration for the Asterix API.
+# Coordinates of the park, for the weather forecasts.
+park:
+  latitude: 49.1341839
+  longitude: 2.5712301
+
+# Official Parc Astérix GraphQL API, giving the whole season calendar.
+# Optional: when empty, the ThemeParks.wiki schedule (a few weeks) is used.
 asterix:
   # GraphQL endpoint
   endpoint:
   queries:
     calendar:
 
+# ThemeParks.wiki: live wait times and fallback calendar.
+themeParks:
+  endpoint: https://api.themeparks.wiki/v1
+  parkId: 9e938687-fd99-46f3-986a-1878210378f8
+
+sources:
+  weatherEndpoint: https://api.open-meteo.com/v1/forecast
+  holidaysEndpoint: https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records
+
+collector:
+  # Interval in minutes between two wait times snapshots.
+  interval: 5
+
 forecasts:
-  # The priority exponent is used to calculate the priority of a forecast job.
-  # Calculated as: priority = (forecast date - last forecast date) ^ priorityExponent
+  # Priority of a slot = hours since its last forecast / (hours until the slot) ^ priorityExponent.
+  # Slots never forecast come first; a higher exponent refreshes close slots more often.
   priorityExponent: 0.6
   # The amount of forecasts to generate concurrently.
   concurrent: 2
@@ -25,3 +52,11 @@ forecasts:
   interval:
     min: 30
     max: 45
+  # Minutes after which a pending forecast is considered lost and queued again.
+  pendingTimeout: 15
+
+model:
+  # Amount of observed slots required before fitting the model on real data.
+  minTrainingDays: 14
+  # Pull of the fitted coefficients towards the expert prior (ridge regression).
+  regularization: 5

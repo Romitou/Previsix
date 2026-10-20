@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Previsix</title>
+  <meta name="description" content="Prévisions d'affluence et de temps d'attente au Parc Astérix">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥐</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>🥐 Previsix</h1>
+      <p class="tagline">Prévisions d'affluence au Parc Astérix</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card" id="live" aria-live="polite">
+      <h2>En direct</h2>
+      <div id="live-content" class="muted">Chargement…</div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Calendrier</h2>
+        <ul class="legend" id="legend"></ul>
+      </div>
+      <div id="calendar" class="months"><p class="muted">Chargement…</p></div>
+    </section>
+
+    <section class="card" id="detail" hidden>
+      <div id="detail-content"></div>
+    </section>
+
+    <section class="card" id="model">
+      <h2>Modèle</h2>
+      <div id="model-content" class="muted">Chargement…</div>
+    </section>
+  </main>
+
+  <footer class="wrap muted">
+    Projet personnel, non affilié au Parc Astérix.
+    Temps d'attente : <a href="https://themeparks.wiki">ThemeParks.wiki</a> ·
+    Météo : <a href="https://open-meteo.com">Open-Meteo</a> ·
+    Vacances scolaires : <a href="https://data.education.gouv.fr">data.education.gouv.fr</a> ·
+    <a href="https://github.com/romitou/previsix">Code source</a>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
