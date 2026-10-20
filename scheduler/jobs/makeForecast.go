@@ -2,46 +2,79 @@ package jobs
 
 import (
 	"context"
-	"github.com/romitou/previsix/database"
+	"log/slog"
+
 	"github.com/romitou/previsix/database/models"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"log"
-	"time"
+	"github.com/romitou/previsix/forecast"
+	"github.com/romitou/previsix/holidays"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func MakeForecast(dayForecast models.DayCalendar) {
-	log.Println("Making forecast for day", dayForecast.StartDate.Time().Format("2006-01-02"))
+// MakeForecast forecasts a slot with the current model and stores the result.
+func (r *Runner) MakeForecast(id bson.ObjectID) {
+	ctx, cancel := r.context()
+	defer cancel()
 
-	db := database.Get().Database("previsix")
-	collection := db.Collection("calendar")
-
-	_, err := collection.UpdateOne(
-		context.Background(),
-		bson.D{{"_id", dayForecast.ID}},
-		bson.D{{"$set", bson.D{{"forecastPending", false}, {"lastForecast", primitive.NewDateTimeFromTime(time.Now())}}}},
-	)
+	day, err := r.Store.Slot(ctx, id)
 	if err != nil {
-		log.Println(err)
+		slog.Error("cannot load the slot to forecast", "id", id.Hex(), "error", err)
+		_ = r.Store.ReleaseForecast(ctx, id)
 		return
 	}
 
-	// Make forecast
-	var forecast models.DayForecast
-	forecast.CrowdScore = 0.5
-	forecast.ConfidenceScore = 0.5
-	forecast.WaitTimes = []float64{10, 20, 30, 40, 50}
-	forecast.ForecastedAt = primitive.NewDateTimeFromTime(time.Now())
-
-	_, err = collection.UpdateOne(
-		context.Background(),
-		bson.D{{"_id", dayForecast.ID}},
-		bson.D{{"$push", bson.D{{"forecasts", forecast}}}},
-	)
+	result, err := r.forecast(ctx, *day)
 	if err != nil {
-		log.Println(err)
+		slog.Error("cannot forecast", "date", day.Date, "error", err)
+		_ = r.Store.ReleaseForecast(ctx, id)
 		return
 	}
 
-	log.Println("Forecast for day", dayForecast.StartDate.Time().Format("2006-01-02"), "is made")
+	if _, err = r.Store.SaveForecast(ctx, result); err != nil {
+		slog.Error("cannot save the forecast", "date", day.Date, "error", err)
+		_ = r.Store.ReleaseForecast(ctx, id)
+		return
+	}
+	slog.Debug("forecast made", "date", day.Date, "type", day.DayType, "avgWait", result.AvgWait, "crowdScore", result.CrowdScore)
+}
+
+// slotFeatures describes a slot with the known holidays and weather.
+func (r *Runner) slotFeatures(ctx context.Context, day models.DayCalendar, periods []holidays.Period) (forecast.Features, error) {
+	events, err := r.Store.EventDates(ctx, day.Date, day.Date)
+	if err != nil {
+		return forecast.Features{}, err
+	}
+	slot := forecast.SlotInfo{
+		Date:       day.Date,
+		Open:       day.StartDate,
+		Close:      day.CloseDate,
+		NightEvent: day.DayType == models.DayForecastTypeEvent,
+		EventDay:   events[day.Date],
+	}
+	return forecast.BuildFeatures(slot, periods, r.Weather.Day(ctx, day.Date)), nil
+}
+
+func (r *Runner) forecast(ctx context.Context, day models.DayCalendar) (models.DayForecast, error) {
+	periods, err := r.Store.Holidays(ctx)
+	if err != nil {
+		return models.DayForecast{}, err
+	}
+	features, err := r.slotFeatures(ctx, day, periods)
+	if err != nil {
+		return models.DayForecast{}, err
+	}
+
+	now := r.Now()
+	model := forecast.Current()
+	prediction := model.Predict(features, day.StartDate, day.CloseDate, now)
+	return models.DayForecast{
+		CalendarID:      day.ID,
+		Date:            day.Date,
+		AvgWait:         prediction.AvgWait,
+		CrowdScore:      prediction.CrowdScore,
+		ConfidenceScore: prediction.Confidence,
+		WaitTimes:       prediction.WaitTimes,
+		Features:        features,
+		ModelSamples:    model.Samples,
+		ForecastedAt:    now,
+	}, nil
 }
